@@ -1,0 +1,12 @@
+# Ignore non-project folders
+DATABASE/
+DOCUMENTS/
+PROJECT DETAILS/
+SRC/
+
+# Ignore zip files
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db

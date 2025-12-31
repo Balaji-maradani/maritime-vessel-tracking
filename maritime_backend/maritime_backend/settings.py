@@ -11,7 +11,12 @@ SECRET_KEY = 'django-insecure-&p-9(nuih*qq_lhxi*y40a3t&(^4myyw(vy-#m@=413uzpjet0
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'maritime-backend-q150.onrender.com',
+]
+
 
 
 # Application definition

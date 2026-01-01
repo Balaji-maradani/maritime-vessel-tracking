@@ -15,6 +15,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'maritime-backend-q150.onrender.com',
+    "https://maritime-vessel-tracking.onrender.com"
 ]
 
 
@@ -139,3 +140,6 @@ SIMPLE_JWT = {
 
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+  "https://maritime-vessel-tracking.onrender.com"
+]

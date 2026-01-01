@@ -3,6 +3,9 @@ import axios from "axios";
 
 const AuthContext = createContext();
 
+// API base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'https://maritime-backend-q150.onrender.com';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => {
@@ -22,7 +25,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       axios
-        .get("http://127.0.0.1:8000/api/me/", {
+        .get(`${API_BASE_URL}/api/me/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -36,7 +39,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const res = await axios.post("http://127.0.0.1:8000/api/token/", {
+      const res = await axios.post(`${API_BASE_URL}/api/token/`, {
         username,
         password,
       });
@@ -57,7 +60,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUserData = async (token) => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/me/", {
+      const res = await axios.get(`${API_BASE_URL}/api/me/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -70,7 +73,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (username, email, password, role = "OPERATOR") => {
     try {
-      const res = await axios.post("http://127.0.0.1:8000/api/register/", {
+      const res = await axios.post(`${API_BASE_URL}/api/register/`, {
         username,
         email,
         password,

@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+// API base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'https://maritime-backend-q150.onrender.com';
+
 /**
  * Notifications panel
  *
@@ -30,7 +33,7 @@ export default function Notifications({ limit = 5 }) {
       setError("");
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/alerts/", {
+        const res = await fetch(`${API_BASE_URL}/api/alerts/`, {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),

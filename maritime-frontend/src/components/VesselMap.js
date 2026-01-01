@@ -3,6 +3,9 @@ import { MapContainer, TileLayer, Marker, Popup, Polygon, Circle, useMap } from 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// API base URL from environment variable (for WebSocket mock)
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'https://maritime-backend-q150.onrender.com';
+
 // Fix default icon issue with Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -936,7 +939,7 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
     
     try {
       // Create mock WebSocket connection
-      const ws = new MockWebSocket('ws://localhost:8080/vessel-tracking');
+      const ws = new MockWebSocket(`ws://${API_BASE_URL.replace(/^https?:\/\//, '')}/vessel-tracking`);
       wsRef.current = ws;
       
       ws.onopen = () => {

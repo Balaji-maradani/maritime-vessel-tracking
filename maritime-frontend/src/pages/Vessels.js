@@ -2,6 +2,9 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import VesselMap from "../components/VesselMap";
 
+// API base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_BASE || 'https://maritime-backend-q150.onrender.com';
+
 // Mock vessel data with Indian Ocean coordinates
 const mockVessels = [
   {
@@ -146,7 +149,7 @@ function Vessels() {
       setError("");
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/vessels/", {
+        const res = await fetch(`${API_BASE_URL}/api/vessels/`, {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polygon, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -99,7 +99,7 @@ const sanitizeVesselDataWithFallback = (vessel) => {
   };
 };
 
-// Mock NOAA-style safety data
+// Enhanced mock safety data with additional layers
 const mockSafetyData = {
   stormZones: [
     {
@@ -131,6 +131,63 @@ const mockSafetyData = {
       ],
       windSpeed: 65,
       description: 'Monsoon depression with heavy rainfall and strong winds'
+    },
+    {
+      id: 'storm_003',
+      name: 'Severe Weather System',
+      type: 'thunderstorm',
+      severity: 'medium',
+      coordinates: [
+        [-5.0, 60.0],
+        [-2.0, 63.0],
+        [-7.0, 65.0],
+        [-10.0, 62.0],
+        [-5.0, 60.0]
+      ],
+      windSpeed: 85,
+      description: 'Severe thunderstorm system with strong winds and heavy rain'
+    }
+  ],
+  piracyZones: [
+    {
+      id: 'piracy_001',
+      name: 'Gulf of Aden High Risk Area',
+      type: 'piracy_hotspot',
+      severity: 'critical',
+      center: [12.0, 45.0],
+      radius: 200000, // meters
+      riskLevel: 'Very High',
+      description: 'Active piracy area - armed guards recommended, avoid night transit'
+    },
+    {
+      id: 'piracy_002',
+      name: 'Somali Basin Risk Zone',
+      type: 'piracy_patrol',
+      severity: 'high',
+      center: [5.0, 55.0],
+      radius: 150000,
+      riskLevel: 'High',
+      description: 'Elevated piracy risk - maintain vigilance, report to naval forces'
+    },
+    {
+      id: 'piracy_003',
+      name: 'Nigerian Waters Risk Area',
+      type: 'piracy_kidnapping',
+      severity: 'high',
+      center: [4.5, 6.0],
+      radius: 120000,
+      riskLevel: 'High',
+      description: 'Kidnapping and robbery risk - enhanced security protocols required'
+    },
+    {
+      id: 'piracy_004',
+      name: 'Strait of Malacca Patrol Zone',
+      type: 'piracy_robbery',
+      severity: 'medium',
+      center: [2.5, 102.0],
+      radius: 80000,
+      riskLevel: 'Medium',
+      description: 'Robbery incidents reported - maintain watch and speed'
     }
   ],
   highRiskWaters: [
@@ -219,6 +276,24 @@ const mockSafetyData = {
       coordinates: [-15.3, 60.1],
       date: '2024-12-30T16:45:00Z',
       description: 'Vessel aground - salvage operations underway'
+    },
+    {
+      id: 'accident_004',
+      name: 'Fire at Sea',
+      type: 'fire',
+      severity: 'high',
+      coordinates: [8.7, 50.2],
+      date: '2025-01-05T11:20:00Z',
+      description: 'Vessel fire reported - emergency response in progress'
+    },
+    {
+      id: 'accident_005',
+      name: 'Man Overboard',
+      type: 'rescue',
+      severity: 'medium',
+      coordinates: [1.2, 103.8],
+      date: '2025-01-06T08:45:00Z',
+      description: 'Search and rescue operation - vessels requested to assist'
     }
   ]
 };
@@ -346,11 +421,11 @@ const MapController = ({ selectedVessel, onMapReady }) => {
 };
 
 // Safety Layers Component
-const SafetyLayers = ({ layerVisibility }) => {
+const SafetyLayers = ({ layerVisibility, safetyData }) => {
   return (
     <>
       {/* Storm Zones */}
-      {layerVisibility.stormZones && mockSafetyData.stormZones.map((storm) => (
+      {layerVisibility.stormZones && safetyData.stormZones.map((storm) => (
         <Polygon
           key={storm.id}
           positions={storm.coordinates}
@@ -374,14 +449,56 @@ const SafetyLayers = ({ layerVisibility }) => {
                 <div className="mt-2 text-xs text-gray-600">
                   {storm.description}
                 </div>
+                {storm.lastUpdated && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Updated: {new Date(storm.lastUpdated).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </Popup>
         </Polygon>
       ))}
 
+      {/* Piracy Zones */}
+      {layerVisibility.piracyZones && safetyData.piracyZones.map((piracy) => (
+        <Circle
+          key={piracy.id}
+          center={piracy.center}
+          radius={piracy.radius}
+          pathOptions={{
+            color: piracy.severity === 'critical' ? '#991b1b' : piracy.severity === 'high' ? '#dc2626' : '#f59e0b',
+            fillColor: piracy.severity === 'critical' ? '#991b1b' : piracy.severity === 'high' ? '#dc2626' : '#f59e0b',
+            fillOpacity: 0.25,
+            weight: 3,
+            dashArray: '5, 5'
+          }}
+        >
+          <Popup>
+            <div className="safety-popup">
+              <div className="font-bold text-lg mb-2 text-red-900">
+                🏴‍☠️ {piracy.name}
+              </div>
+              <div className="space-y-1 text-sm">
+                <div><strong>Type:</strong> {piracy.type.replace('_', ' ')}</div>
+                <div><strong>Risk Level:</strong> {piracy.riskLevel}</div>
+                <div><strong>Severity:</strong> {piracy.severity}</div>
+                <div className="mt-2 text-xs text-gray-600">
+                  {piracy.description}
+                </div>
+                {piracy.lastUpdated && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Updated: {new Date(piracy.lastUpdated).toLocaleString()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Popup>
+        </Circle>
+      ))}
+
       {/* High Risk Waters */}
-      {layerVisibility.highRiskWaters && mockSafetyData.highRiskWaters.map((risk) => (
+      {layerVisibility.highRiskWaters && safetyData.highRiskWaters.map((risk) => (
         <Circle
           key={risk.id}
           center={risk.center}
@@ -404,6 +521,11 @@ const SafetyLayers = ({ layerVisibility }) => {
                 <div className="mt-2 text-xs text-gray-600">
                   {risk.description}
                 </div>
+                {risk.lastUpdated && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Updated: {new Date(risk.lastUpdated).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </Popup>
@@ -411,7 +533,7 @@ const SafetyLayers = ({ layerVisibility }) => {
       ))}
 
       {/* Restricted Zones */}
-      {layerVisibility.restrictedZones && mockSafetyData.restrictedZones.map((zone) => (
+      {layerVisibility.restrictedZones && safetyData.restrictedZones.map((zone) => (
         <Polygon
           key={zone.id}
           positions={zone.coordinates}
@@ -433,6 +555,11 @@ const SafetyLayers = ({ layerVisibility }) => {
                 <div className="mt-2 text-xs text-gray-600">
                   {zone.description}
                 </div>
+                {zone.lastUpdated && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Updated: {new Date(zone.lastUpdated).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </Popup>
@@ -440,7 +567,7 @@ const SafetyLayers = ({ layerVisibility }) => {
       ))}
 
       {/* Accident Locations */}
-      {layerVisibility.accidentLocations && mockSafetyData.accidentLocations.map((accident) => {
+      {layerVisibility.accidentLocations && safetyData.accidentLocations.map((accident) => {
         // Validate accident coordinates before rendering
         if (!isValidLatLng(accident.coordinates[0], accident.coordinates[1])) {
           console.warn(`Invalid coordinates for accident ${accident.id}:`, accident.coordinates);
@@ -465,6 +592,11 @@ const SafetyLayers = ({ layerVisibility }) => {
                   <div className="mt-2 text-xs text-gray-600">
                     {accident.description}
                   </div>
+                  {accident.lastUpdated && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Updated: {new Date(accident.lastUpdated).toLocaleString()}
+                    </div>
+                  )}
                 </div>
               </div>
             </Popup>
@@ -473,142 +605,6 @@ const SafetyLayers = ({ layerVisibility }) => {
       })}
     </>
   );
-};
-
-// Mock WebSocket simulation class
-class MockWebSocket {
-  constructor(url) {
-    this.url = url;
-    this.readyState = WebSocket.CONNECTING;
-    this.onopen = null;
-    this.onmessage = null;
-    this.onclose = null;
-    this.onerror = null;
-    
-    // Simulate connection after a short delay
-    setTimeout(() => {
-      this.readyState = WebSocket.OPEN;
-      if (this.onopen) this.onopen();
-    }, 100);
-  }
-  
-  close() {
-    this.readyState = WebSocket.CLOSED;
-    if (this.onclose) this.onclose();
-  }
-  
-  send(data) {
-    // Mock send - in real implementation this would send to server
-    console.log('Mock WebSocket send:', data);
-  }
-}
-
-// Generate realistic movement for vessels with enhanced safety
-const generateVesselMovement = (vessel) => {
-  // First, sanitize and validate the vessel data with safe fallbacks
-  const sanitizedVessel = sanitizeVesselDataWithFallback(vessel);
-  
-  // Double-check that we have valid coordinates after sanitization
-  if (!isValidLatLng(sanitizedVessel.lat, sanitizedVessel.lng)) {
-    console.warn(`Critical: Vessel ${vessel.id || vessel.name} still has invalid coordinates after sanitization, skipping movement`);
-    return vessel; // Return original vessel unchanged as last resort
-  }
-  
-  // Ensure speed and heading are valid numbers
-  let speed = sanitizedVessel.speed || 0;
-  let heading = sanitizedVessel.heading || 0;
-  
-  if (typeof speed !== 'number' || isNaN(speed) || !isFinite(speed)) {
-    speed = 0;
-  }
-  if (typeof heading !== 'number' || isNaN(heading) || !isFinite(heading)) {
-    heading = 0;
-  }
-  
-  // Clamp speed to reasonable range (0-50 knots)
-  speed = Math.max(0, Math.min(50, speed));
-  
-  // Normalize heading to 0-360 degrees
-  heading = ((heading % 360) + 360) % 360;
-  
-  if (sanitizedVessel.status !== 'Moving') {
-    // Anchored vessels have minimal drift
-    const driftLat = (Math.random() - 0.5) * 0.001;
-    const driftLng = (Math.random() - 0.5) * 0.001;
-    
-    let newLat = sanitizedVessel.lat + driftLat;
-    let newLng = sanitizedVessel.lng + driftLng;
-    
-    // Clamp the new coordinates to valid ranges
-    newLat = clampLatitude(newLat);
-    newLng = clampLongitude(newLng);
-    
-    // Validate the new coordinates before returning
-    if (!isValidLatLng(newLat, newLng)) {
-      console.warn(`Generated invalid drift coordinates for anchored vessel ${vessel.id || vessel.name}, using original position`);
-      newLat = sanitizedVessel.lat;
-      newLng = sanitizedVessel.lng;
-    }
-    
-    return {
-      ...sanitizedVessel,
-      lat: newLat,
-      lng: newLng,
-      speed: Math.max(0, speed + (Math.random() - 0.5) * 0.5),
-      heading: heading
-    };
-  }
-  
-  // Moving vessels follow their heading with some variation
-  const headingRad = (heading * Math.PI) / 180;
-  const speedKnots = speed;
-  const distancePerUpdate = (speedKnots * 0.000154) / 120; // Approximate nautical miles to degrees per 2-3 seconds
-  
-  // Calculate movement with safety checks
-  const latMovement = Math.cos(headingRad) * distancePerUpdate + (Math.random() - 0.5) * 0.002;
-  const lngMovement = Math.sin(headingRad) * distancePerUpdate + (Math.random() - 0.5) * 0.002;
-  
-  // Validate movement calculations
-  if (!isFinite(latMovement) || !isFinite(lngMovement) || isNaN(latMovement) || isNaN(lngMovement)) {
-    console.warn(`Invalid movement calculation for vessel ${vessel.id || vessel.name}, using minimal drift instead`);
-    const safeDriftLat = (Math.random() - 0.5) * 0.001;
-    const safeDriftLng = (Math.random() - 0.5) * 0.001;
-    
-    return {
-      ...sanitizedVessel,
-      lat: clampLatitude(sanitizedVessel.lat + safeDriftLat),
-      lng: clampLongitude(sanitizedVessel.lng + safeDriftLng),
-      speed: speed,
-      heading: heading
-    };
-  }
-  
-  let newLat = sanitizedVessel.lat + latMovement;
-  let newLng = sanitizedVessel.lng + lngMovement;
-  
-  // Clamp coordinates to valid ranges
-  newLat = clampLatitude(newLat);
-  newLng = clampLongitude(newLng);
-  
-  // Final validation of new coordinates
-  if (!isValidLatLng(newLat, newLng)) {
-    console.warn(`Generated invalid coordinates for moving vessel ${vessel.id || vessel.name}, using clamped values`);
-    newLat = clampLatitude(sanitizedVessel.lat);
-    newLng = clampLongitude(sanitizedVessel.lng);
-  }
-  
-  // Generate new speed and heading with variation
-  const newSpeed = Math.max(0, Math.min(50, speedKnots + (Math.random() - 0.5) * 1.0));
-  const headingVariation = (Math.random() - 0.5) * 10;
-  const newHeading = ((heading + headingVariation) % 360 + 360) % 360;
-  
-  return {
-    ...sanitizedVessel,
-    lat: newLat,
-    lng: newLng,
-    speed: newSpeed,
-    heading: newHeading
-  };
 };
 
 // Initial mock vessel data for the Indian Ocean region
@@ -882,17 +878,31 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
   const [mapError, setMapError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [vesselTypeFilter, setVesselTypeFilter] = useState('');
+  const [flagFilter, setFlagFilter] = useState('');
+  const [cargoFilter, setCargoFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  
   // Safety layer visibility state
   const [layerVisibility, setLayerVisibility] = useState({
     stormZones: true,
+    piracyZones: true,
     highRiskWaters: true,
     restrictedZones: true,
     accidentLocations: true
   });
+
+  // Safety data state
+  const [safetyData, setSafetyData] = useState(mockSafetyData);
+  const [safetyDataLoading, setSafetyDataLoading] = useState(false);
+  const [safetyDataError, setSafetyDataError] = useState(null);
+  const [lastSafetyUpdate, setLastSafetyUpdate] = useState(new Date());
   
   // Refs for cleanup
-  const wsRef = useRef(null);
   const intervalRef = useRef(null);
+  const safetyIntervalRef = useRef(null);
   
   // Indian Ocean center coordinates
   const mapCenter = [-10.0, 75.0];
@@ -921,6 +931,137 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
     getVessels: () => liveVessels
   }));
 
+  // Fetch safety data from backend APIs
+  const fetchSafetyData = useCallback(async () => {
+    setSafetyDataLoading(true);
+    setSafetyDataError(null);
+    
+    try {
+      // Fetch all safety data in parallel
+      const [stormResponse, piracyResponse, restrictedResponse, accidentResponse] = await Promise.allSettled([
+        fetch(`${API_BASE_URL}/api/safety/storms/`, {
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        fetch(`${API_BASE_URL}/api/safety/piracy-zones/`, {
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        fetch(`${API_BASE_URL}/api/safety/restricted-zones/`, {
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        fetch(`${API_BASE_URL}/api/safety/accidents/`, {
+          headers: { 'Content-Type': 'application/json' }
+        })
+      ]);
+
+      const newSafetyData = { ...mockSafetyData }; // Start with mock data as fallback
+
+      // Process storm zones
+      if (stormResponse.status === 'fulfilled' && stormResponse.value.ok) {
+        const stormData = await stormResponse.value.json();
+        const storms = Array.isArray(stormData) ? stormData : stormData.results || stormData.storms || [];
+        if (storms.length > 0) {
+          newSafetyData.stormZones = storms.map(storm => ({
+            id: storm.id || storm.storm_id,
+            name: storm.name || storm.storm_name,
+            type: storm.type || storm.storm_type || 'storm',
+            severity: storm.severity || 'medium',
+            coordinates: storm.coordinates || storm.polygon || [],
+            windSpeed: storm.wind_speed || storm.windSpeed || 0,
+            description: storm.description || `${storm.type || 'Storm'} system`,
+            lastUpdated: storm.last_updated || storm.updated_at
+          }));
+          console.log(`Loaded ${storms.length} storm zones from API`);
+        }
+      } else {
+        console.warn('Failed to fetch storm data, using mock data');
+      }
+
+      // Process piracy zones
+      if (piracyResponse.status === 'fulfilled' && piracyResponse.value.ok) {
+        const piracyData = await piracyResponse.value.json();
+        const piracyZones = Array.isArray(piracyData) ? piracyData : piracyData.results || piracyData.piracy_zones || [];
+        if (piracyZones.length > 0) {
+          newSafetyData.piracyZones = piracyZones.map(zone => ({
+            id: zone.id || zone.zone_id,
+            name: zone.name || zone.zone_name,
+            type: zone.type || zone.zone_type || 'piracy_risk',
+            severity: zone.severity || zone.risk_level || 'medium',
+            center: zone.center || [zone.latitude, zone.longitude] || [0, 0],
+            radius: zone.radius || zone.radius_meters || 100000,
+            riskLevel: zone.risk_level || zone.riskLevel || 'Medium',
+            description: zone.description || `Piracy risk area - ${zone.risk_level || 'medium'} threat level`,
+            lastUpdated: zone.last_updated || zone.updated_at
+          }));
+          console.log(`Loaded ${piracyZones.length} piracy zones from API`);
+        }
+      } else {
+        console.warn('Failed to fetch piracy data, using mock data');
+      }
+
+      // Process restricted zones
+      if (restrictedResponse.status === 'fulfilled' && restrictedResponse.value.ok) {
+        const restrictedData = await restrictedResponse.value.json();
+        const restrictedZones = Array.isArray(restrictedData) ? restrictedData : restrictedData.results || restrictedData.restricted_zones || [];
+        if (restrictedZones.length > 0) {
+          newSafetyData.restrictedZones = restrictedZones.map(zone => ({
+            id: zone.id || zone.zone_id,
+            name: zone.name || zone.zone_name,
+            type: zone.type || zone.zone_type || 'restricted',
+            coordinates: zone.coordinates || zone.polygon || [],
+            validUntil: zone.valid_until || zone.expires_at || 'permanent',
+            description: zone.description || `Restricted area - ${zone.type || 'navigation prohibited'}`,
+            lastUpdated: zone.last_updated || zone.updated_at
+          }));
+          console.log(`Loaded ${restrictedZones.length} restricted zones from API`);
+        }
+      } else {
+        console.warn('Failed to fetch restricted zones data, using mock data');
+      }
+
+      // Process accident locations
+      if (accidentResponse.status === 'fulfilled' && accidentResponse.value.ok) {
+        const accidentData = await accidentResponse.value.json();
+        const accidents = Array.isArray(accidentData) ? accidentData : accidentData.results || accidentData.accidents || [];
+        if (accidents.length > 0) {
+          newSafetyData.accidentLocations = accidents.map(accident => ({
+            id: accident.id || accident.incident_id,
+            name: accident.name || accident.incident_name || accident.title,
+            type: accident.type || accident.incident_type || 'accident',
+            severity: accident.severity || accident.risk_level || 'medium',
+            coordinates: accident.coordinates || [accident.latitude, accident.longitude] || [0, 0],
+            date: accident.date || accident.incident_date || accident.created_at,
+            description: accident.description || `${accident.type || 'Incident'} reported`,
+            lastUpdated: accident.last_updated || accident.updated_at
+          }));
+          console.log(`Loaded ${accidents.length} accident locations from API`);
+        }
+      } else {
+        console.warn('Failed to fetch accident data, using mock data');
+      }
+
+      // High risk waters can be derived from piracy zones or fetched separately
+      newSafetyData.highRiskWaters = newSafetyData.piracyZones.filter(zone => 
+        zone.severity === 'critical' || zone.severity === 'high'
+      ).map(zone => ({
+        ...zone,
+        type: 'piracy' // Ensure consistent type for high risk waters
+      }));
+
+      setSafetyData(newSafetyData);
+      setLastSafetyUpdate(new Date());
+      setSafetyDataError(null);
+      
+      console.log('Safety data updated successfully');
+      
+    } catch (error) {
+      console.error('Error fetching safety data:', error);
+      setSafetyDataError(`Failed to load safety data: ${error.message}`);
+      // Keep existing data (mock or previously loaded) on error
+    } finally {
+      setSafetyDataLoading(false);
+    }
+  }, []);
+
   // Toggle layer visibility
   const toggleLayer = (layerName) => {
     try {
@@ -933,101 +1074,119 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
     }
   };
 
-  // Initialize WebSocket connection and real-time updates
+  // Fetch live vessel data from backend
+  const fetchLiveVesselData = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/vessels/`, {
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authorization header if needed
+          // 'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const vessels = Array.isArray(data) ? data : data.results || data.vessels || [];
+      
+      // Sanitize vessel data
+      const sanitizedVessels = vessels.map(vessel => sanitizeVesselDataWithFallback(vessel));
+      
+      setLiveVessels(sanitizedVessels);
+      setLastUpdate(new Date());
+      setIsConnected(true);
+      
+      console.log(`Fetched ${sanitizedVessels.length} vessels from API`);
+      
+    } catch (error) {
+      console.warn('Failed to fetch live vessel data, using mock data:', error.message);
+      setIsConnected(false);
+      // Fallback to mock data if API fails
+      if (liveVessels.length === 0) {
+        setLiveVessels(initialMockVessels);
+      }
+    }
+  }, [liveVessels.length]); // Only depend on length to avoid unnecessary re-renders
+
+  // Filter vessels based on search and filter criteria
+  const filteredVessels = useMemo(() => {
+    return liveVessels.filter(vessel => {
+      // Search by name or IMO
+      const matchesSearch = !searchTerm || 
+        vessel.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vessel.imo_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vessel.mmsi?.includes(searchTerm);
+      
+      // Filter by vessel type
+      const matchesType = !vesselTypeFilter || 
+        vessel.type === vesselTypeFilter || 
+        vessel.vessel_type === vesselTypeFilter;
+      
+      // Filter by flag
+      const matchesFlag = !flagFilter || vessel.flag === flagFilter;
+      
+      // Filter by cargo
+      const matchesCargo = !cargoFilter || 
+        vessel.cargo_type === cargoFilter ||
+        vessel.cargo === cargoFilter;
+      
+      return matchesSearch && matchesType && matchesFlag && matchesCargo;
+    });
+  }, [liveVessels, searchTerm, vesselTypeFilter, flagFilter, cargoFilter]);
+
+  // Get unique values for filter dropdowns
+  const vesselTypes = useMemo(() => {
+    const types = [...new Set(liveVessels.map(v => v.type || v.vessel_type).filter(Boolean))];
+    return types.sort();
+  }, [liveVessels]);
+
+  const flags = useMemo(() => {
+    const flagList = [...new Set(liveVessels.map(v => v.flag).filter(Boolean))];
+    return flagList.sort();
+  }, [liveVessels]);
+
+  const cargoTypes = useMemo(() => {
+    const types = [...new Set(liveVessels.map(v => v.cargo_type || v.cargo).filter(Boolean))];
+    return types.sort();
+  }, [liveVessels]);
+
+  // Initialize live data fetching and real-time updates
   useEffect(() => {
     let mounted = true;
     
-    try {
-      // Create mock WebSocket connection
-      const ws = new MockWebSocket(`ws://${API_BASE_URL.replace(/^https?:\/\//, '')}/vessel-tracking`);
-      wsRef.current = ws;
+    const initializeVesselData = async () => {
+      setIsLoading(true);
       
-      ws.onopen = () => {
+      try {
+        // Initial fetch of live vessel data
+        await fetchLiveVesselData();
+        
         if (!mounted) return;
         
-        console.log('Mock WebSocket connected for vessel tracking');
-        setIsConnected(true);
         setIsLoading(false);
         
-        // Start real-time updates every 2.5 seconds
-        intervalRef.current = setInterval(() => {
+        // Set up periodic updates every 30 seconds for live data
+        intervalRef.current = setInterval(async () => {
           if (!mounted) return;
           
           try {
-            setLiveVessels(currentVessels => {
-              // Defensive check for current vessels
-              if (!Array.isArray(currentVessels) || currentVessels.length === 0) {
-                console.warn('No valid vessels for movement update, using initial mock data');
-                return initialMockVessels;
-              }
-              
-              const updatedVessels = currentVessels.map(vessel => {
-                try {
-                  return generateVesselMovement(vessel);
-                } catch (error) {
-                  console.error(`Error updating vessel ${vessel.id || vessel.name}:`, error);
-                  return vessel; // Return unchanged vessel on error
-                }
-              });
-              
-              // Simulate WebSocket message
-              const updateMessage = {
-                type: 'vessel_update',
-                timestamp: new Date().toISOString(),
-                vessels: updatedVessels
-              };
-              
-              // Trigger onmessage handler
-              if (ws.onmessage) {
-                try {
-                  ws.onmessage({
-                    data: JSON.stringify(updateMessage)
-                  });
-                } catch (error) {
-                  console.error('Error in WebSocket message handler:', error);
-                }
-              }
-              
-              setLastUpdate(new Date());
-              return updatedVessels;
-            });
+            await fetchLiveVesselData();
           } catch (error) {
-            console.error('Error in vessel update interval:', error);
-            setMapError(`Update error: ${error.message}`);
+            console.error('Error in periodic vessel update:', error);
           }
-        }, 2500); // Update every 2.5 seconds
-      };
-      
-      ws.onmessage = (event) => {
-        if (!mounted) return;
+        }, 30000); // Update every 30 seconds
         
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'vessel_update') {
-            console.log('Received vessel update:', data.vessels?.length || 0, 'vessels');
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-      
-      ws.onclose = () => {
-        if (!mounted) return;
-        console.log('Mock WebSocket disconnected');
-        setIsConnected(false);
-      };
-      
-      ws.onerror = (error) => {
-        if (!mounted) return;
-        console.error('Mock WebSocket error:', error);
-        setIsConnected(false);
-        setMapError('WebSocket connection error');
-      };
-    } catch (error) {
-      console.error('Error initializing WebSocket:', error);
-      setMapError(`Initialization error: ${error.message}`);
-      setIsLoading(false);
-    }
+      } catch (error) {
+        console.error('Error initializing vessel data:', error);
+        setMapError(`Initialization error: ${error.message}`);
+        setIsLoading(false);
+      }
+    };
+    
+    initializeVesselData();
     
     // Cleanup function
     return () => {
@@ -1035,15 +1194,47 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      if (wsRef.current) {
-        try {
-          wsRef.current.close();
-        } catch (error) {
-          console.error('Error closing WebSocket:', error);
-        }
+    };
+  }, [fetchLiveVesselData]); // Include fetchLiveVesselData in dependencies
+
+  // Initialize safety data fetching and periodic updates
+  useEffect(() => {
+    let mounted = true;
+    
+    const initializeSafetyData = async () => {
+      try {
+        // Initial fetch of safety data
+        await fetchSafetyData();
+        
+        if (!mounted) return;
+        
+        // Set up periodic updates every 5 minutes for safety data (less frequent than vessel data)
+        safetyIntervalRef.current = setInterval(async () => {
+          if (!mounted) return;
+          
+          try {
+            await fetchSafetyData();
+          } catch (error) {
+            console.error('Error in periodic safety data update:', error);
+          }
+        }, 300000); // Update every 5 minutes
+        
+      } catch (error) {
+        console.error('Error initializing safety data:', error);
+        setSafetyDataError(`Safety data initialization error: ${error.message}`);
       }
     };
-  }, []);
+    
+    initializeSafetyData();
+    
+    // Cleanup function
+    return () => {
+      mounted = false;
+      if (safetyIntervalRef.current) {
+        clearInterval(safetyIntervalRef.current);
+      }
+    };
+  }, [fetchSafetyData]);
 
   // Update vessels when props change
   useEffect(() => {
@@ -1071,15 +1262,15 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
     }
   }, [propVessels]);
 
-  // Filter vessels to only include those with valid coordinates
+  // Filter vessels to only include those with valid coordinates from filtered results
   const validVessels = useMemo(() => {
     try {
-      if (!Array.isArray(liveVessels)) {
-        console.warn('liveVessels is not an array, using empty array');
+      if (!Array.isArray(filteredVessels)) {
+        console.warn('filteredVessels is not an array, using empty array');
         return [];
       }
       
-      return liveVessels.filter(vessel => {
+      return filteredVessels.filter(vessel => {
         try {
           if (!vessel || typeof vessel !== 'object') {
             console.warn('Invalid vessel object:', vessel);
@@ -1103,7 +1294,7 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
       console.error('Error filtering valid vessels:', error);
       return [];
     }
-  }, [liveVessels]);
+  }, [filteredVessels]);
 
   // Error boundary-style error display
   if (mapError) {
@@ -1152,25 +1343,141 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
         <div className="flex items-center gap-2 text-sm">
           <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
           <span className="text-gray-800 font-medium">
-            {isConnected ? 'Live Tracking' : 'Disconnected'}
+            {isConnected ? 'Live Data' : 'Mock Data'}
           </span>
         </div>
         <div className="text-xs text-gray-600 mt-1">
-          Last update: {lastUpdate.toLocaleTimeString()}
+          Vessels: {lastUpdate.toLocaleTimeString()}
         </div>
-        {validVessels.length !== liveVessels.length && (
-          <div className="text-xs text-orange-600 mt-1">
-            {liveVessels.length - validVessels.length} vessel(s) with invalid coordinates
+        <div className="flex items-center gap-1 text-xs text-gray-600">
+          <div className={`w-2 h-2 rounded-full ${safetyDataError ? 'bg-red-400' : safetyDataLoading ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+          <span>Safety: {lastSafetyUpdate.toLocaleTimeString()}</span>
+        </div>
+        <div className="text-xs text-blue-600 mt-1">
+          {filteredVessels.length} of {liveVessels.length} vessels shown
+        </div>
+      </div>
+
+      {/* Search and Filter Panel */}
+      <div className="absolute top-4 right-48 z-[1000]">
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg">
+          {/* Search Bar */}
+          <div className="p-3 border-b border-gray-200">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by name or IMO..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64 px-3 py-2 pr-8 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <svg className="absolute right-2 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
-        )}
+          
+          {/* Filter Toggle */}
+          <div className="p-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              Filters
+            </button>
+          </div>
+          
+          {/* Filter Options */}
+          {showFilters && (
+            <div className="p-3 border-t border-gray-200 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Vessel Type</label>
+                <select
+                  value={vesselTypeFilter}
+                  onChange={(e) => setVesselTypeFilter(e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">All Types</option>
+                  {vesselTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Flag</label>
+                <select
+                  value={flagFilter}
+                  onChange={(e) => setFlagFilter(e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">All Flags</option>
+                  {flags.map(flag => (
+                    <option key={flag} value={flag}>{flag}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Cargo Type</label>
+                <select
+                  value={cargoFilter}
+                  onChange={(e) => setCargoFilter(e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">All Cargo</option>
+                  {cargoTypes.map(cargo => (
+                    <option key={cargo} value={cargo}>{cargo}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Clear Filters */}
+              {(searchTerm || vesselTypeFilter || flagFilter || cargoFilter) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setVesselTypeFilter('');
+                    setFlagFilter('');
+                    setCargoFilter('');
+                  }}
+                  className="w-full px-2 py-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  Clear All Filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Safety Layers Control Panel */}
       {showSafetyLayers && (
         <div className="absolute top-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm p-4 rounded-lg shadow-lg max-w-xs">
-          <div className="text-sm font-semibold text-gray-800 mb-3">
-            Safety Layers
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-sm font-semibold text-gray-800">
+              Safety Layers
+            </div>
+            {safetyDataLoading && (
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            )}
           </div>
+          
+          {safetyDataError && (
+            <div className="mb-3 p-2 bg-red-100 border border-red-300 rounded text-xs text-red-700">
+              {safetyDataError}
+              <button
+                onClick={fetchSafetyData}
+                className="ml-2 text-red-800 hover:text-red-900 underline"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
@@ -1180,7 +1487,17 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
                 className="rounded"
               />
               <div className="w-3 h-3 bg-red-500 rounded border border-white"></div>
-              <span className="text-gray-700">Storm Zones</span>
+              <span className="text-gray-700">Storm Zones ({safetyData.stormZones.length})</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={layerVisibility.piracyZones}
+                onChange={() => toggleLayer('piracyZones')}
+                className="rounded"
+              />
+              <div className="w-3 h-3 bg-red-700 rounded-full border border-white"></div>
+              <span className="text-gray-700">Piracy Zones ({safetyData.piracyZones.length})</span>
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
@@ -1190,7 +1507,7 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
                 className="rounded"
               />
               <div className="w-3 h-3 bg-orange-500 rounded-full border border-white"></div>
-              <span className="text-gray-700">High Risk Waters</span>
+              <span className="text-gray-700">High Risk Waters ({safetyData.highRiskWaters.length})</span>
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
@@ -1200,7 +1517,7 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
                 className="rounded"
               />
               <div className="w-3 h-3 bg-purple-500 rounded border border-white"></div>
-              <span className="text-gray-700">Restricted Zones</span>
+              <span className="text-gray-700">Restricted Zones ({safetyData.restrictedZones.length})</span>
             </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
@@ -1210,8 +1527,21 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
                 className="rounded"
               />
               <div className="w-3 h-3 bg-red-600 rounded-full border border-white animate-pulse"></div>
-              <span className="text-gray-700">Accident Locations</span>
+              <span className="text-gray-700">Accident Locations ({safetyData.accidentLocations.length})</span>
             </label>
+          </div>
+          
+          <div className="mt-3 pt-2 border-t border-gray-300">
+            <div className="text-xs text-gray-600">
+              Safety data updated: {lastSafetyUpdate.toLocaleTimeString()}
+            </div>
+            <button
+              onClick={fetchSafetyData}
+              disabled={safetyDataLoading}
+              className="mt-1 text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {safetyDataLoading ? 'Updating...' : 'Refresh Safety Data'}
+            </button>
           </div>
         </div>
       )}
@@ -1242,7 +1572,7 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
         
         {/* Safety Layers */}
         {showSafetyLayers && (
-          <SafetyLayers layerVisibility={layerVisibility} />
+          <SafetyLayers layerVisibility={layerVisibility} safetyData={safetyData} />
         )}
         
         {/* Vessel Markers - Only render vessels with valid coordinates */}
@@ -1417,6 +1747,10 @@ const VesselMap = forwardRef(({ vessels: propVessels, onVesselClick, selectedVes
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-red-500 border border-red-600"></div>
                 <span className="text-gray-700">Storm Zones</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-700 rounded-full border border-white"></div>
+                <span className="text-gray-700">Piracy Zones</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-orange-500 rounded-full border border-white"></div>

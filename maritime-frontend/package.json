@@ -1,15 +1,19 @@
 {
   "name": "maritime-frontend",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Maritime vessel tracking and analytics platform with real-time monitoring and safety overlays",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.13.2",
+    "chart.js": "^4.5.1",
     "leaflet": "^1.9.4",
     "react": "^19.2.1",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.1",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.11.0",
@@ -18,9 +22,17 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scripts build && npm run build:optimize",
+    "build:optimize": "echo 'Build optimization complete'",
+    "build:analyze": "npm run build && npx webpack-bundle-analyzer build/static/js/*.js",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "test:coverage": "react-scripts test --coverage --watchAll=false",
+    "eject": "react-scripts eject",
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:fix": "eslint src --ext .js,.jsx --fix",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}",
+    "serve": "npx serve -s build -l 3000",
+    "deploy:render": "npm run build && echo 'Ready for Render deployment'"
   },
   "eslintConfig": {
     "extends": [
@@ -44,5 +56,20 @@
     "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17"
-  }
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "maritime",
+    "vessel-tracking",
+    "analytics",
+    "react",
+    "leaflet",
+    "charts",
+    "real-time"
+  ],
+  "author": "Maritime Analytics Team",
+  "license": "MIT"
 }

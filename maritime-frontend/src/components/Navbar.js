@@ -23,6 +23,20 @@ export default function Navbar() {
     return role === "OPERATOR" || role === "ANALYST" || role === "ADMIN";
   };
 
+  const canAccessAnalytics = () => {
+    // ANALYST and ADMIN can access full analytics, OPERATOR gets basic analytics
+    if (!user) return false;
+    const role = user.role?.toUpperCase();
+    return role === "OPERATOR" || role === "ANALYST" || role === "ADMIN";
+  };
+
+  const canAccessPorts = () => {
+    // All authenticated users can access ports dashboard
+    if (!user) return false;
+    const role = user.role?.toUpperCase();
+    return role === "OPERATOR" || role === "ANALYST" || role === "ADMIN";
+  };
+
   const getUserDisplayName = () => {
     if (!user) return "";
     return user.username || user.email || "User";
@@ -65,6 +79,20 @@ export default function Navbar() {
             {canAccessVessels() && (
               <Link to="/vessels" className="btn btn-sm btn-ghost text-white">
                 Vessels
+              </Link>
+            )}
+
+            {/* Analytics - visible based on role */}
+            {canAccessAnalytics() && (
+              <Link to="/analytics" className="btn btn-sm btn-ghost text-white">
+                Analytics
+              </Link>
+            )}
+
+            {/* Ports - visible based on role */}
+            {canAccessPorts() && (
+              <Link to="/ports" className="btn btn-sm btn-ghost text-white">
+                Ports
               </Link>
             )}
 

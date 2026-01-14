@@ -4,6 +4,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Vessels from "./pages/Vessels";
+import Analytics from "./pages/Analytics";
+import PortCongestionDashboard from "./pages/PortCongestionDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -31,6 +33,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Vessels />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ports"
+          element={
+            <ProtectedRoute>
+              <PortCongestionDashboard />
             </ProtectedRoute>
           }
         />

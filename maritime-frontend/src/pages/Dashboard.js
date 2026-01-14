@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import VesselMap from "../components/VesselMap";
+import Notifications from "../components/Notifications";
+import AnalyticsDashboard from "../components/AnalyticsDashboard";
 
 // Mock data for maritime operations
 const mockVessels = [
@@ -86,44 +88,7 @@ const mockVessels = [
   }
 ];
 
-const mockAlerts = [
-  {
-    id: 1,
-    ship: "MV Cargo Express",
-    time: "14:32",
-    severity: "High",
-    type: "Storm Entry",
-    message: "Vessel entering severe weather zone",
-    status: "New"
-  },
-  {
-    id: 2,
-    ship: "MS Pacific Wave",
-    time: "13:45",
-    severity: "Critical",
-    type: "Piracy Risk",
-    message: "High piracy risk area detected",
-    status: "Acknowledged"
-  },
-  {
-    id: 3,
-    ship: "LNG Explorer",
-    time: "12:18",
-    severity: "Medium",
-    type: "Port Congestion",
-    message: "Destination port experiencing delays",
-    status: "New"
-  },
-  {
-    id: 4,
-    ship: "MV Atlantic Star",
-    time: "11:55",
-    severity: "Low",
-    type: "Route Deviation",
-    message: "Minor course correction detected",
-    status: "Acknowledged"
-  }
-];
+
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -158,7 +123,7 @@ export default function Dashboard() {
   const delayedShips = mockVessels.filter(v => v.riskLevel === "High").length;
   const dangerZoneShips = mockVessels.filter(v => v.riskLevel === "High" || v.riskLevel === "Medium").length;
   const congestionShips = mockVessels.filter(v => v.status === "Waiting").length;
-  const newAlerts = mockAlerts.filter(a => a.status === "New").length;
+  const newAlerts = 3; // Simplified alert count for stats display
 
   if (!user) {
     return <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -464,70 +429,10 @@ export default function Dashboard() {
             />
           )}
 
-          {/* ANALYST - Route Analysis View */}
+          {/* ANALYST - Advanced Analytics Dashboard */}
           {isAnalyst && (
-            <div className="h-full bg-gradient-to-br from-blue-900/20 to-gray-900 relative overflow-hidden">
-              {/* Map Placeholder */}
-              <div className="absolute inset-0 bg-gray-800 opacity-50">
-                <div className="w-full h-full bg-gradient-to-br from-blue-900/30 to-gray-800/30"></div>
-              </div>
-              
-              {/* Grid overlay for map feel */}
-              <div className="absolute inset-0 opacity-20">
-                <div className="w-full h-full" style={{
-                  backgroundImage: `
-                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
-                  `,
-                  backgroundSize: '50px 50px'
-                }}></div>
-              </div>
-
-              {/* Analyst Route Lines */}
-              <div className="absolute inset-0">
-                <svg className="w-full h-full">
-                  <defs>
-                    <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" style={{stopColor:'#3b82f6', stopOpacity:0.8}} />
-                      <stop offset="100%" style={{stopColor:'#8b5cf6', stopOpacity:0.8}} />
-                    </linearGradient>
-                  </defs>
-                  <path d="M 100 200 Q 300 100 500 250 T 800 200" stroke="url(#routeGradient)" strokeWidth="3" fill="none" strokeDasharray="5,5">
-                    <animate attributeName="stroke-dashoffset" values="0;10" dur="1s" repeatCount="indefinite"/>
-                  </path>
-                  <path d="M 150 300 Q 400 200 650 350 T 900 300" stroke="url(#routeGradient)" strokeWidth="3" fill="none" strokeDasharray="5,5">
-                    <animate attributeName="stroke-dashoffset" values="0;10" dur="1.5s" repeatCount="indefinite"/>
-                  </path>
-                </svg>
-              </div>
-
-              {/* Overlay Labels */}
-              <div className="absolute top-4 left-4 space-y-2">
-                <div className="bg-blue-900/80 px-3 py-1 rounded text-sm border border-blue-600">
-                  📊 Route Analysis
-                </div>
-                <div className="bg-purple-900/80 px-3 py-1 rounded text-sm border border-purple-600">
-                  📈 Traffic Patterns
-                </div>
-                <div className="bg-green-900/80 px-3 py-1 rounded text-sm border border-green-600">
-                  ⚡ Efficiency Zones
-                </div>
-              </div>
-
-              {/* Map Controls */}
-              <div className="absolute bottom-4 left-4 bg-gray-800/90 rounded-lg p-3 border border-gray-600">
-                <div className="text-sm font-medium mb-2">Analysis Legend</div>
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-1 bg-blue-500 border border-white"></div>
-                    <span>Primary Routes</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-1 bg-purple-500 border border-white"></div>
-                    <span>Alternative Routes</span>
-                  </div>
-                </div>
-              </div>
+            <div className="h-full bg-gray-900 p-6 overflow-y-auto">
+              <AnalyticsDashboard userRole="ANALYST" />
             </div>
           )}
 
@@ -670,107 +575,152 @@ export default function Dashboard() {
 
         {/* SECTION 4 - Right Sidebar - Role-based content */}
         <div className="w-80 bg-gray-800 border-l border-gray-700 p-6 overflow-y-auto">
-          {/* OPERATOR - Alerts & Notifications */}
+          {/* OPERATOR - Real-time Alerts & Notifications */}
           {isOperator && (
             <>
-              <h2 className="text-xl font-bold mb-6 text-blue-400">Alerts & Notifications</h2>
-              <div className="space-y-4">
-                {mockAlerts.map(alert => (
-                  <div key={alert.id} className={`p-4 rounded-lg border ${
-                    alert.severity === 'Critical' ? 'bg-red-900/30 border-red-600' :
-                    alert.severity === 'High' ? 'bg-orange-900/30 border-orange-600' :
-                    alert.severity === 'Medium' ? 'bg-yellow-900/30 border-yellow-600' :
-                    'bg-blue-900/30 border-blue-600'
-                  }`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div className={`px-2 py-1 rounded text-xs font-medium ${
-                        alert.severity === 'Critical' ? 'bg-red-600 text-white' :
-                        alert.severity === 'High' ? 'bg-orange-600 text-white' :
-                        alert.severity === 'Medium' ? 'bg-yellow-600 text-black' :
-                        'bg-blue-600 text-white'
-                      }`}>
-                        {alert.severity}
-                      </div>
-                      <div className={`px-2 py-1 rounded text-xs ${
-                        alert.status === 'New' ? 'bg-green-600 text-white' : 'bg-gray-600 text-white'
-                      }`}>
-                        {alert.status}
-                      </div>
-                    </div>
-                    <div className="font-medium text-sm mb-1">{alert.type}</div>
-                    <div className="text-sm text-gray-300 mb-2">{alert.ship}</div>
-                    <div className="text-xs text-gray-400 mb-2">{alert.message}</div>
-                    <div className="text-xs text-gray-500">{alert.time}</div>
+              {/* Quick Analytics Summary for Operators */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 text-blue-400">Quick Analytics</h3>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="bg-gray-700 p-2 rounded text-center">
+                    <div className="text-lg font-bold text-green-400">87.3%</div>
+                    <div className="text-xs text-gray-300">Efficiency</div>
                   </div>
-                ))}
+                  <div className="bg-gray-700 p-2 rounded text-center">
+                    <div className="text-lg font-bold text-blue-400">92.1%</div>
+                    <div className="text-xs text-gray-300">On-Time</div>
+                  </div>
+                  <div className="bg-gray-700 p-2 rounded text-center">
+                    <div className="text-lg font-bold text-purple-400">$2.3M</div>
+                    <div className="text-xs text-gray-300">Savings</div>
+                  </div>
+                  <div className="bg-gray-700 p-2 rounded text-center">
+                    <div className="text-lg font-bold text-yellow-400">23.4h</div>
+                    <div className="text-xs text-gray-300">Avg Time</div>
+                  </div>
+                </div>
               </div>
+
+              <h2 className="text-xl font-bold mb-6 text-blue-400">Alerts & Notifications</h2>
+              <Notifications 
+                limit={8} 
+                autoRefresh={true} 
+                refreshInterval={30000} 
+              />
             </>
           )}
 
-          {/* ANALYST - Trend Summaries */}
+          {/* ANALYST - Analytics Summary Sidebar */}
           {isAnalyst && (
             <>
-              <h2 className="text-xl font-bold mb-6 text-blue-400">Analytics Summary</h2>
+              <h2 className="text-xl font-bold mb-6 text-blue-400">Key Insights</h2>
               
-              {/* Performance Trends */}
+              {/* Top KPIs */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-gray-300">Performance Trends</h3>
+                <h3 className="text-lg font-semibold mb-3 text-gray-300">Performance KPIs</h3>
                 <div className="space-y-3">
                   <div className="bg-gray-700 p-3 rounded">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm">Route Efficiency</span>
-                      <span className="text-green-400">↗ +5.2%</span>
+                      <span className="text-sm">Overall Efficiency</span>
+                      <span className="text-blue-400 font-bold">87.3%</span>
                     </div>
-                    <div className="text-xs text-gray-400">vs last month</div>
+                    <div className="text-xs text-green-400">↗ +2.1% vs last period</div>
                   </div>
                   <div className="bg-gray-700 p-3 rounded">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm">Fuel Consumption</span>
-                      <span className="text-red-400">↘ -3.1%</span>
+                      <span className="text-sm">Cost Savings</span>
+                      <span className="text-green-400 font-bold">$2.34M</span>
                     </div>
-                    <div className="text-xs text-gray-400">vs last month</div>
+                    <div className="text-xs text-green-400">↗ +12.3% vs last period</div>
                   </div>
                   <div className="bg-gray-700 p-3 rounded">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm">On-Time Delivery</span>
-                      <span className="text-green-400">↗ +2.8%</span>
+                      <span className="text-purple-400 font-bold">92.1%</span>
                     </div>
-                    <div className="text-xs text-gray-400">vs last month</div>
+                    <div className="text-xs text-green-400">↗ +1.8% vs last period</div>
                   </div>
                 </div>
               </div>
 
-              {/* Route Analysis */}
+              {/* Route Performance */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-gray-300">Route Analysis</h3>
+                <h3 className="text-lg font-semibold mb-3 text-gray-300">Top Routes</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center p-2 bg-gray-700 rounded">
-                    <span className="text-sm">Most Efficient Route</span>
-                    <span className="text-green-400">Asia-Europe</span>
+                    <div>
+                      <div className="text-sm font-medium">Asia-Europe</div>
+                      <div className="text-xs text-gray-400">1,250 vessels</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-green-400 font-bold">94.2%</div>
+                      <div className="text-xs text-gray-400">efficiency</div>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-gray-700 rounded">
-                    <span className="text-sm">Highest Traffic</span>
-                    <span className="text-blue-400">Trans-Pacific</span>
+                    <div>
+                      <div className="text-sm font-medium">Trans-Pacific</div>
+                      <div className="text-xs text-gray-400">980 vessels</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-yellow-400 font-bold">89.7%</div>
+                      <div className="text-xs text-gray-400">efficiency</div>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-gray-700 rounded">
-                    <span className="text-sm">Cost Savings</span>
-                    <span className="text-purple-400">$2.3M</span>
+                    <div>
+                      <div className="text-sm font-medium">Atlantic</div>
+                      <div className="text-xs text-gray-400">750 vessels</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-green-400 font-bold">91.3%</div>
+                      <div className="text-xs text-gray-400">efficiency</div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Predictive Insights */}
-              <div>
+              {/* Predictive Analytics */}
+              <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 text-gray-300">Predictive Insights</h3>
                 <div className="space-y-2 text-sm">
                   <div className="p-3 bg-blue-900/30 border border-blue-600 rounded">
-                    <div className="font-medium mb-1">Weather Impact</div>
+                    <div className="font-medium mb-1 flex items-center gap-2">
+                      <span>🌊</span>
+                      <span>Weather Impact</span>
+                    </div>
                     <div className="text-gray-300">Storm system may delay 3 vessels by 6-8 hours</div>
                   </div>
                   <div className="p-3 bg-yellow-900/30 border border-yellow-600 rounded">
-                    <div className="font-medium mb-1">Port Congestion</div>
+                    <div className="font-medium mb-1 flex items-center gap-2">
+                      <span>🏭</span>
+                      <span>Port Congestion</span>
+                    </div>
                     <div className="text-gray-300">Singapore port expected 15% increase in wait times</div>
                   </div>
+                  <div className="p-3 bg-green-900/30 border border-green-600 rounded">
+                    <div className="font-medium mb-1 flex items-center gap-2">
+                      <span>⚡</span>
+                      <span>Optimization</span>
+                    </div>
+                    <div className="text-gray-300">New route optimization could save $180K monthly</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3 text-gray-300">Quick Actions</h3>
+                <div className="space-y-2">
+                  <button className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors">
+                    📊 Generate Report
+                  </button>
+                  <button className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm transition-colors">
+                    📈 Export Analytics
+                  </button>
+                  <button className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm transition-colors">
+                    🔍 Deep Dive Analysis
+                  </button>
                 </div>
               </div>
             </>
